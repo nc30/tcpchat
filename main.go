@@ -7,24 +7,48 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 )
 
 var (
-	id    uuid.UUID
-	count int = 0
-	addr  string
+	id          uuid.UUID
+	count       int = 0
+	addr        string
+	mux         sync.Mutex
+	connections map[net.Conn]bool
 )
+
+func init() {
+	connections = map[net.Conn]bool{}
+}
+
+func broadcast(data ...interface{}) {
+	mux.Lock()
+	defer mux.Unlock()
+	for c, _ := range connections {
+		fmt.Fprintln(c, data...)
+	}
+}
 
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 	defer log.Println("disconnected:", conn.RemoteAddr())
+	mux.Lock()
+	connections[conn] = true
+	mux.Unlock()
+	defer func() {
+		mux.Lock()
+		delete(connections, conn)
+		mux.Unlock()
+	}()
+
 	reader := bufio.NewReaderSize(conn, 4098)
 
 	log.Println("connect:", count, "from:", conn.RemoteAddr())
 	fmt.Fprintln(conn, "HELLO", id.String())
-	fmt.Fprintln(conn, "Your", count, "st connection.")
+	fmt.Fprintln(conn, "Now", len(connections), "connections alive.")
 
 	for {
 		line, _, err := reader.ReadLine()
@@ -45,12 +69,12 @@ func handleConn(conn net.Conn) {
 		if cmd == "add" {
 			count++
 			log.Println("countup", count)
-			fmt.Fprintln(conn, "Your", count, "st connection.")
+			broadcast("countup to", count)
 		}
 		if cmd == "sub" {
 			count--
 			log.Println("countdown", count)
-			fmt.Fprintln(conn, "Your", count, "st connection.")
+			broadcast("countup to", count)
 		}
 		if cmd == "bye" || cmd == "quit" || cmd == "exit" {
 			break
@@ -59,6 +83,7 @@ func handleConn(conn net.Conn) {
 }
 
 func main() {
+
 	id = uuid.New()
 	log.SetFlags(0)
 	log.SetPrefix(id.String() + " ")
