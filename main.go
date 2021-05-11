@@ -42,6 +42,7 @@ func handleConn(conn net.Conn) {
 		mux.Lock()
 		delete(connections, conn)
 		mux.Unlock()
+		broadcast("1 user quit")
 	}()
 
 	reader := bufio.NewReaderSize(conn, 4098)
