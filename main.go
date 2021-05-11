@@ -68,7 +68,7 @@ func handleConn(conn net.Conn) {
 
 		if cmd == "broadcast" {
 			if len(commands) > 1 {
-				broadcast("broadcast: " + commands[1])
+				broadcast("broadcast: ", commands[1])
 			}
 		}
 		if cmd == "now" {
