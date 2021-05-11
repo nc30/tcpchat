@@ -66,6 +66,14 @@ func handleConn(conn net.Conn) {
 			cmd = strings.ToLower(string(line))
 		}
 
+		if cmd == "broadcast" {
+			if len(commands) > 1 {
+				fmt.Fprintln(conn, "broadcast: ", commands[1])
+			}
+		}
+		if cmd == "now" {
+			fmt.Fprintln(conn, "now", len(connections), "connection alive, count is", count)
+		}
 		if cmd == "add" {
 			count++
 			log.Println("countup", count)
