@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -12,6 +14,7 @@ import (
 var (
 	id    uuid.UUID
 	count int = 0
+	addr  string
 )
 
 func handleConn(conn net.Conn) {
@@ -27,15 +30,29 @@ func handleConn(conn net.Conn) {
 		line, _, err := reader.ReadLine()
 		if err != nil {
 			log.Println(err)
-			continue
+			break
 		}
 		log.Println(string(line))
-		if string(line) == "add" {
+
+		commands := strings.Split(string(line), " ")
+		var cmd string
+		if len(commands) != 0 {
+			cmd = strings.ToLower(commands[0])
+		} else {
+			cmd = strings.ToLower(string(line))
+		}
+
+		if cmd == "add" {
 			count++
 			log.Println("countup", count)
 			fmt.Fprintln(conn, "Your", count, "st connection.")
 		}
-		if string(line) == "bye" {
+		if cmd == "sub" {
+			count--
+			log.Println("countdown", count)
+			fmt.Fprintln(conn, "Your", count, "st connection.")
+		}
+		if cmd == "bye" || cmd == "quit" || cmd == "exit" {
 			break
 		}
 	}
@@ -46,8 +63,11 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix(id.String() + " ")
 
-	log.Println("listening:", "23")
-	srv, err := net.Listen("tcp", ":23")
+	flag.StringVar(&addr, "l", ":23", "listen address")
+	flag.Parse()
+
+	log.Println("listening:", addr)
+	srv, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
